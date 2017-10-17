@@ -3,6 +3,8 @@ package com.example.wraath.myapplication;
 import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 
@@ -104,5 +106,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         this.authenticate("12345", "12345", "ABCDE", "ABCDE", "Users");
+
+        final Button refreshButton = (Button) findViewById(R.id.button);
+        refreshButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                authenticate("12345", "12345", "ABCDE", "ABCDE", "Users");
+            }
+        });
     }
 }
