@@ -1,6 +1,8 @@
 package com.example.wraath.myapplication;
 
+import android.annotation.TargetApi;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -23,6 +25,20 @@ public class MainActivity extends AppCompatActivity {
     String ip = "196.37.22.179";
     int port = 9011;
     int attempt_count = 0;
+
+    protected boolean shouldAskPermissions() {
+        return (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1);
+    }
+
+    @TargetApi(23)
+    protected void askPermissions() {
+        String[] permissions = {
+                "android.permission.READ_EXTERNAL_STORAGE",
+                "android.permission.WRITE_EXTERNAL_STORAGE"
+        };
+        int requestCode = 200;
+        requestPermissions(permissions, requestCode);
+    }
 
     /*
         A convenience function to wrap key-value pairs in the correct XML format
@@ -132,6 +148,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        if (shouldAskPermissions()) {
+            askPermissions();
+        }
 
         this.authenticate("12345", "12345", "ABCDE", "ABCDE", "Users");
 
