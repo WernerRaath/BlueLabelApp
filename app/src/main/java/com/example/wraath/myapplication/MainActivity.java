@@ -15,6 +15,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.logging.Logger;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -65,41 +66,59 @@ public class MainActivity extends AppCompatActivity {
         messageTextView.setTextColor(Color.BLUE);
         attempt_count++;
 
+        String m, response = "";
         try {
+            System.out.println("Attempt Telnet connection");
+
             TelnetClient telnet = new TelnetClient();
             telnet.connect(ip, port);
             InputStream in = telnet.getInputStream();
             PrintStream out = new PrintStream(telnet.getOutputStream());
+            System.out.println("Writing XML to Telnet stream");
             out.println(xml);
             out.flush();
 
-            String m, response = "";
+            System.out.println("Reading response from Telnet stream");
             while (true){
                 if ((m = in.read() + "") == null) break;
                 response += m;
             }
+            System.out.println("Closing Telnet stream");
             in.close();
             out.close();
             telnet.disconnect();
+        } catch (Exception e){
+            e.printStackTrace();
+            message = e.getLocalizedMessage() +
+                    "\nConnection to " + ip + ":" + port + " failed...";
+            messageTextView.setTextColor(Color.RED);
+        }
+        try {
+            System.out.println("Attempt Socket connection");
 
             Socket socket = new Socket(ip, port);
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+            System.out.println("Writing XML to Socket stream");
             writer.print(xml + "\r\n");
             writer.flush();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
+            System.out.println("Reading response from Socket stream");
             while (true){
                 if ((m = reader.readLine()) == null) break;
                 response += m + "\n";
             }
+            System.out.println("Closing Socket stream");
             writer.close();
             reader.close();
             socket.close();
 
+            System.out.println("Updating UI");
             message = response;
             messageTextView.setTextColor(Color.GREEN);
         } catch (Exception e){
+            e.printStackTrace();
             message = e.getLocalizedMessage() +
                     "\nConnection to " + ip + ":" + port + " failed...";
             messageTextView.setTextColor(Color.RED);
