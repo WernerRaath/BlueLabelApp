@@ -4,6 +4,7 @@ import android.annotation.TargetApi;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
@@ -24,7 +25,6 @@ public class MainActivity extends AppCompatActivity {
 
     String ip = "196.37.22.179";
     int port = 9011;
-    int attempt_count = 0;
 
     protected boolean shouldAskPermissions() {
         return (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1);
@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
         A convenience function to wrap key-value pairs in the correct XML format
      */
     private String wrapXmlTag(String tag, String value){
-        return "<" + tag + ">" + value + "</" + tag + ">\n";
+        return "<" + tag + ">" + value + "</" + tag + ">";
     }
 
     /*
@@ -52,16 +52,16 @@ public class MainActivity extends AppCompatActivity {
      */
     private String paramsToXML(String pin, String device_id, String device_ser, String device_ver,
                                String transType){
-        String xml = "<request>\n";
+        String xml = "<request>";
         xml += this.wrapXmlTag("EventType", "Authentication");
-        xml += "<event>\n";
+        xml += "<event>";
         xml += this.wrapXmlTag("UserPin", pin);
         xml += this.wrapXmlTag("DeviceId", device_id );
         xml += this.wrapXmlTag("DeviceSer", device_ser );
         xml += this.wrapXmlTag("DeviceVer", device_ver );
         xml += this.wrapXmlTag("TransType", transType );
-        xml += "</event>\n";
-        xml += "</request>\n";
+        xml += "</event>";
+        xml += "</request>";
         return xml;
     }
 
@@ -76,78 +76,59 @@ public class MainActivity extends AppCompatActivity {
 
         final String xml = this.paramsToXML(pin, device_id, device_ser, device_ver, trans_type);
         dataTextView.setText(xml);
+        System.out.println(xml);
+
         String message = "Connecting to " + ip + ":" + port;
 
         messageTextView.setText(message);
         messageTextView.setTextColor(Color.BLUE);
-        attempt_count++;
 
-        String m, response = "";
-        try {
-            System.out.println("Attempt Telnet connection");
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    String m, response = "";
+                    System.out.println("Attempt Socket connection");
 
-            TelnetClient telnet = new TelnetClient();
-            telnet.connect(ip, port);
-            InputStream in = telnet.getInputStream();
-            PrintStream out = new PrintStream(telnet.getOutputStream());
-            System.out.println("Writing XML to Telnet stream");
-            out.println(xml);
-            out.flush();
+                    Socket socket = new Socket(ip, port);
+                    socket.setKeepAlive(true);
+                    socket.setTcpNoDelay(true);
+                    socket.setOOBInline(true);
+                    socket.setReuseAddress(true);
+                    PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+                    System.out.println("Writing XML to Socket stream");
+                    writer.print(xml + "\r\n");
+                    writer.flush();
 
-            System.out.println("Reading response from Telnet stream");
-            while (true){
-                if ((m = in.read() + "") == null) break;
-                response += m;
-            }
-            System.out.println("Closing Telnet stream");
-            in.close();
-            out.close();
-            telnet.disconnect();
-        } catch (Exception e){
-            e.printStackTrace();
-            message = e.getLocalizedMessage() +
-                    "\nConnection to " + ip + ":" + port + " failed...";
-            messageTextView.setTextColor(Color.RED);
-        }
-        if (response.isEmpty()) {
-            try {
-                System.out.println("Attempt Socket connection");
-
-                Socket socket = new Socket(ip, port);
-                PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-                System.out.println("Writing XML to Socket stream");
-                writer.print(xml + "\r\n");
-                writer.flush();
-
-                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
                 System.out.println("Reading response from Socket stream");
-                while (true) {
-                    if ((m = reader.readLine()) == null) break;
+                    m = reader.readLine();
+                    System.out.println(m);
                     response += m + "\n";
-                }
-                System.out.println("Closing Socket stream");
-                writer.close();
-                reader.close();
-                socket.close();
 
-                System.out.println("Updating UI");
-                message = response;
-                messageTextView.setTextColor(Color.GREEN);
-            } catch (Exception e) {
-                e.printStackTrace();
-                message = e.getLocalizedMessage() +
-                        "\nConnection to " + ip + ":" + port + " failed...";
-                messageTextView.setTextColor(Color.RED);
+                    System.out.println("Closing Socket stream");
+                    writer.close();
+                    reader.close();
+                    socket.close();
+
+                    System.out.println("Updating UI");
+                    messageTextView.setText(response);
+                    messageTextView.setTextColor(Color.GREEN);
+                } catch (Exception e) {
+                    messageTextView.setTextColor(Color.RED);
+                    messageTextView.setText( e.toString() +
+                            "\nConnection to " + ip + ":" + port + " failed...");
+                    e.printStackTrace();
+                }
             }
-        }
-        messageTextView.setText("[Attempt " + attempt_count + "]: " + message );
+        }).start();
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         if (shouldAskPermissions()) {
             askPermissions();
         }
