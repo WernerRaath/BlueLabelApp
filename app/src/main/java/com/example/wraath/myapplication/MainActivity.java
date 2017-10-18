@@ -93,35 +93,37 @@ public class MainActivity extends AppCompatActivity {
                     "\nConnection to " + ip + ":" + port + " failed...";
             messageTextView.setTextColor(Color.RED);
         }
-        try {
-            System.out.println("Attempt Socket connection");
+        if (response.isEmpty()) {
+            try {
+                System.out.println("Attempt Socket connection");
 
-            Socket socket = new Socket(ip, port);
-            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-            System.out.println("Writing XML to Socket stream");
-            writer.print(xml + "\r\n");
-            writer.flush();
+                Socket socket = new Socket(ip, port);
+                PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+                System.out.println("Writing XML to Socket stream");
+                writer.print(xml + "\r\n");
+                writer.flush();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            System.out.println("Reading response from Socket stream");
-            while (true){
-                if ((m = reader.readLine()) == null) break;
-                response += m + "\n";
+                System.out.println("Reading response from Socket stream");
+                while (true) {
+                    if ((m = reader.readLine()) == null) break;
+                    response += m + "\n";
+                }
+                System.out.println("Closing Socket stream");
+                writer.close();
+                reader.close();
+                socket.close();
+
+                System.out.println("Updating UI");
+                message = response;
+                messageTextView.setTextColor(Color.GREEN);
+            } catch (Exception e) {
+                e.printStackTrace();
+                message = e.getLocalizedMessage() +
+                        "\nConnection to " + ip + ":" + port + " failed...";
+                messageTextView.setTextColor(Color.RED);
             }
-            System.out.println("Closing Socket stream");
-            writer.close();
-            reader.close();
-            socket.close();
-
-            System.out.println("Updating UI");
-            message = response;
-            messageTextView.setTextColor(Color.GREEN);
-        } catch (Exception e){
-            e.printStackTrace();
-            message = e.getLocalizedMessage() +
-                    "\nConnection to " + ip + ":" + port + " failed...";
-            messageTextView.setTextColor(Color.RED);
         }
         messageTextView.setText("[Attempt " + attempt_count + "]: " + message );
     }
